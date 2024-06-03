@@ -1,0 +1,70 @@
+---
+- name: Install NVIDIA GPU Driver and Configure Ollama AI
+  become: true
+  hosts: all
+
+  tasks:
+    - name: Check GPU devices
+      command: ubuntu-drivers devices
+
+    - name: Install NVIDIA library packages
+      apt:
+        name:
+          - libnvidia-common-535
+          - libnvidia-gl-535
+        update_cache: yes
+
+    - name: Install NVIDIA driver
+      apt:
+        name: nvidia-driver-535-server
+
+    - name: Reboot system
+      reboot:
+
+    - name: Install Ollama AI platform
+      get_url:
+        url: https://ollama.com/install.sh
+        dest: /tmp/ollama.sh
+        mode: '0755'
+
+    - name: Run Ollama install script
+      command: /tmp/ollama.sh
+
+    - name: Configure Ollama service
+      lineinfile:
+        path: /etc/systemd/system/ollama.service
+        insertbefore: "^\[Install\]"
+        line: "{{ item }}"
+      loop:
+        - Environment=OLLAMA_HOST=0.0.0.0
+        - Environment=OLLAMA_KEEP_ALIVE=-1
+
+    - name: Open firewall port
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 11434
+        jump: ACCEPT
+        state: present
+        action: insert
+
+    - name: Save iptables rules
+      command: sudo -s iptables-save -c
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Restart Ollama service
+      systemd:
+        name: ollama
+        state: restarted
+
+    - name: Check Ollama service status
+      command: netstat -tulpn
+      register: netstat_output
+
+    - name: Verify Ollama is listening
+      fail:
+        msg: "Ollama service is not listening on port 11434"
+      when: "'11434' not in netstat_output.stdout"

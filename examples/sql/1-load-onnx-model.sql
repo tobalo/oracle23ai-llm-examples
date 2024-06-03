@@ -1,0 +1,1 @@
+a.	exec dbms_vector.load_onnx_model('DM_DUMP', 'all-MiniLM-L6-v2.onnx', 'doc_model', JSON('{"function" : "embedding", "embeddingOutput" : "embedding", "input" : {"input": ["DATA"]}}'));
