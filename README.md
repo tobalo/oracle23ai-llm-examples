@@ -1,6 +1,42 @@
 # Examples of using 23ai with OLLAMA
 This guide is for reference only and research examples only. This is not intended for production systems or official Oracle guidance.
 
+## High-Level
+```mermaid
+graph LR;
+  subgraph privatenetwork[13.x.x.x/16 - Private Network]
+    subgraph RED[OCI Roving Edge Infrastructure - 13.x.x.x:PORT/api/]
+    EdgeLLMAPI[Init<br>RED LLM API]
+    ODB[(Oracle 23ai<br>Enterprise Data<br>Store)]
+    LoadONNX>Load .onnx models to RED<br>oci.region.s3.api]
+    ODBChunked[Service<br>Load Documents to DB]
+    VectorizedODB[(Oracle 23ai <br>GenAI Enabled)]
+    EdgeLLMServicePostonfig[Service<br>RED LLM API<br>PL/SQL or REST]
+    EdgeLLMAPI-->ODB
+    EdgeLLMAPI-->LoadONNX
+    VectorizedODB-->|database-access-controls<br>analyst_user|EdgeLLMServicePostonfig
+    LoadONNX-->ODBChunked
+   
+    ODBChunked-->VectorizedODB
+    ODB-->|configure|VectorizedODB
+    EdgeLLMServicePostonfig-->|private-endpoint|ANALYST_PLSQL_USER>Natural Language Analysis<br>13.x.x.x/api/chat<br>13.x.x.x/api/generate<br>13.x.x.x/api/embed]
+    end
+
+    subgraph analyticsenv[Analyst LOB]
+        ANALYST_PLSQL_USER-->AnalystA[/Analyst A\]
+        ANALYST_PLSQL_USER-->AnalystB[/Analyst B\]
+        ANALYST_PLSQL_USER-->AnalystC[/Analyst C\]
+        ANALYST_PLSQL_USER-->AnalystD[/Analyst D\]
+    end
+  end
+
+  subgraph OCI[OCI Home Region]
+    ObjStore[(Object Storage)]
+  end
+  RED-->|native data-sync|ObjStore
+  ObjStore-->|pull enterprise documents|ODBChunked
+```
+
 ## Prerequisites
 
 An Ubuntu system with an NVIDIA GPU installed.
@@ -98,5 +134,5 @@ Reference the sequence inside `./examples/sql` for leveraging the LLM service in
 
 
 ### Contributors
-- Tim Cline
 - Tobalo Torres-Valderas
+- Tim Cline
